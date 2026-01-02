@@ -20,7 +20,34 @@ load_dotenv()
 # Google OAuth yapılandırması
 CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-REDIRECT_URI = 'http://localhost:8501/'
+
+# Redirect URI'yi dinamik olarak belirle (Streamlit Cloud veya localhost)
+def get_redirect_uri():
+    """Mevcut sayfa URL'sine göre redirect URI belirle"""
+    # 1. Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud'da set edilmeli)
+    streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
+    if streamlit_url:
+        return streamlit_url.rstrip('/') + '/'
+    
+    # 2. Streamlit Cloud'da otomatik tespit (eğer environment variable set edilmemişse)
+    # Streamlit Cloud URL'sini hardcode edebiliriz
+    streamlit_cloud_url = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
+    
+    # 3. Eğer localhost'ta çalışıyorsa
+    # Streamlit'in server bilgilerini kontrol et
+    try:
+        import streamlit as st
+        # Localhost'ta çalışıyorsa
+        if 'localhost' in str(st.get_option("server.headless")):
+            return 'http://localhost:8501/'
+    except:
+        pass
+    
+    # 4. Varsayılan: Streamlit Cloud URL (production için)
+    return streamlit_cloud_url
+
+# İlk yüklemede redirect URI'yi belirle
+REDIRECT_URI = get_redirect_uri()
 
 # Google Ads yapılandırması
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
@@ -45,6 +72,9 @@ st.set_page_config(
 
 def get_flow():
     """OAuth flow nesnesini oluştur"""
+    # Runtime'da redirect URI'yi belirle (Streamlit Cloud için)
+    redirect_uri = get_redirect_uri()
+    
     flow = Flow.from_client_config(
         {
             "web": {
@@ -52,11 +82,11 @@ def get_flow():
                 "client_secret": CLIENT_SECRET,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [REDIRECT_URI]
+                "redirect_uris": [redirect_uri]
             }
         },
         scopes=SCOPES,
-        redirect_uri=REDIRECT_URI
+        redirect_uri=redirect_uri
     )
     return flow
 
