@@ -27,17 +27,17 @@ STREAMLIT_CLOUD_URL = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamli
 
 def get_redirect_uri():
     """Mevcut sayfa URL'sine göre redirect URI belirle"""
-    # 1. Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
-    streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
-    if streamlit_url:
-        return streamlit_url.rstrip('/') + '/'
-    
-    # 2. Development modu kontrolü (sadece localhost için)
+    # Development modu kontrolü (sadece localhost için)
     # Eğer USE_LOCALHOST environment variable set edilmişse, localhost kullan
     if os.getenv('USE_LOCALHOST', '').lower() == 'true':
         return 'http://localhost:8501/'
     
-    # 3. Varsayılan: Her zaman Streamlit Cloud URL'si kullan (production)
+    # Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
+    streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
+    if streamlit_url:
+        return streamlit_url.rstrip('/') + '/'
+    
+    # Varsayılan: Her zaman Streamlit Cloud URL'si kullan (production)
     # Streamlit Cloud'da çalışıyorsa bu kullanılacak
     return STREAMLIT_CLOUD_URL
 
@@ -395,6 +395,10 @@ def render_seo_search_console():
         if st.button("🔗 Google ile Bağlan", type="primary", use_container_width=True):
             try:
                 flow = get_flow()
+                redirect_uri = get_redirect_uri()
+                # Debug: Redirect URI'yi göster (geliştirme için)
+                st.info(f"🔗 Redirect URI: {redirect_uri}")
+                
                 authorization_url, _ = flow.authorization_url(
                     access_type='offline',
                     include_granted_scopes='true',
