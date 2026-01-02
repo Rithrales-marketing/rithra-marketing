@@ -839,8 +839,7 @@ def render_settings():
     st.markdown("### 💰 Google Ads")
     if GOOGLE_ADS_DEVELOPER_TOKEN and GOOGLE_ADS_CUSTOMER_ID:
         st.success("✅ API Bilgileri Yapılandırılmış")
-        st.info(f"Developer Token: {GOOGLE_ADS_DEVELOPER_TOKEN[:10]}...")
-        st.info(f"Customer ID: {GOOGLE_ADS_CUSTOMER_ID}")
+        st.info("Developer Token ve Customer ID .env dosyasından okunuyor.")
     else:
         st.error("❌ API Bilgileri Eksik")
         st.info("Lütfen .env dosyasına GOOGLE_ADS_DEVELOPER_TOKEN ve GOOGLE_ADS_CUSTOMER_ID ekleyin.")
@@ -849,7 +848,12 @@ def render_settings():
     
     # Meta Ads durumu
     st.markdown("### 📱 Meta Ads")
-    st.info("🚧 Yakında eklenecek")
+    if META_APP_ID and META_APP_SECRET:
+        st.success("✅ API Bilgileri Yapılandırılmış")
+        st.info("Meta App ID ve App Secret .env dosyasından okunuyor.")
+    else:
+        st.warning("⚠️ API Bilgileri Eksik")
+        st.info("Lütfen .env dosyasına META_APP_ID ve META_APP_SECRET ekleyin.")
     
     st.markdown("---")
     
