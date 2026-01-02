@@ -21,26 +21,17 @@ load_dotenv()
 CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
-# Redirect URI'yi dinamik olarak belirle (Streamlit Cloud veya localhost)
-# Streamlit Cloud URL'si (production için - hardcoded)
+# Redirect URI - Streamlit Cloud URL'si (production)
 STREAMLIT_CLOUD_URL = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
 
 def get_redirect_uri():
-    """Mevcut sayfa URL'sine göre redirect URI belirle"""
-    # Development modu kontrolü (sadece localhost için)
-    # Eğer USE_LOCALHOST environment variable set edilmişse, localhost kullan
-    use_localhost = os.getenv('USE_LOCALHOST', '').lower() == 'true'
-    if use_localhost:
-        return 'http://localhost:8501/'
-    
+    """Redirect URI belirle - Sadece Streamlit Cloud URL'si kullan"""
     # Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
     streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
     if streamlit_url:
         return streamlit_url.rstrip('/') + '/'
     
-    # Varsayılan: Her zaman Streamlit Cloud URL'si kullan (production)
-    # Streamlit Cloud'da çalışıyorsa bu kullanılacak
-    # NOT: Localhost'ta test etmek için USE_LOCALHOST=true set edin
+    # Varsayılan: Streamlit Cloud URL'si (her zaman)
     return STREAMLIT_CLOUD_URL
 
 # Google Ads yapılandırması
@@ -408,10 +399,20 @@ def render_seo_search_console():
             st.rerun()
         except Exception as e:
             st.error(f"Yetkilendirme hatası: {e}")
-            st.error(f"Detay: {str(e)}")
-            # Debug bilgisi
-            st.info(f"🔍 Kullanılan Redirect URI: {get_redirect_uri()}")
-            st.info(f"🔍 Query params: {dict(query_params)}")
+            error_msg = str(e)
+            if "redirect_uri_mismatch" in error_msg.lower():
+                st.error("❌ Redirect URI uyumsuzluğu!")
+                st.warning(f"Kullanılan Redirect URI: {get_redirect_uri()}")
+                st.info("""
+                **Çözüm:**
+                1. Google Cloud Console'da OAuth 2.0 Client ID'nizi kontrol edin
+                2. "Authorized redirect URIs" bölümüne şu URL'yi ekleyin:
+                   https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/
+                3. Değişikliklerin kaydedildiğinden emin olun
+                4. Birkaç dakika bekleyin (değişikliklerin yayılması için)
+                """)
+            else:
+                st.error(f"Detay: {error_msg}")
 
     if credentials is None:
         st.info("Google Search Console'a bağlanmak için aşağıdaki butona tıklayın.")
@@ -419,10 +420,6 @@ def render_seo_search_console():
         if st.button("🔗 Google ile Bağlan", type="primary", use_container_width=True):
             try:
                 flow = get_flow()
-                redirect_uri = get_redirect_uri()
-                # Debug: Redirect URI'yi göster (geliştirme için)
-                st.info(f"🔗 Redirect URI: {redirect_uri}")
-                
                 authorization_url, _ = flow.authorization_url(
                     access_type='offline',
                     include_granted_scopes='true',
