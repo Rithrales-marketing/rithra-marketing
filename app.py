@@ -22,32 +22,24 @@ CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
 # Redirect URI'yi dinamik olarak belirle (Streamlit Cloud veya localhost)
+# Streamlit Cloud URL'si (production için - hardcoded)
+STREAMLIT_CLOUD_URL = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
+
 def get_redirect_uri():
     """Mevcut sayfa URL'sine göre redirect URI belirle"""
-    # 1. Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud'da set edilmeli)
+    # 1. Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
     streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
     if streamlit_url:
         return streamlit_url.rstrip('/') + '/'
     
-    # 2. Streamlit Cloud'da otomatik tespit (eğer environment variable set edilmemişse)
-    # Streamlit Cloud URL'sini hardcode edebiliriz
-    streamlit_cloud_url = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
+    # 2. Development modu kontrolü (sadece localhost için)
+    # Eğer USE_LOCALHOST environment variable set edilmişse, localhost kullan
+    if os.getenv('USE_LOCALHOST', '').lower() == 'true':
+        return 'http://localhost:8501/'
     
-    # 3. Eğer localhost'ta çalışıyorsa
-    # Streamlit'in server bilgilerini kontrol et
-    try:
-        import streamlit as st
-        # Localhost'ta çalışıyorsa
-        if 'localhost' in str(st.get_option("server.headless")):
-            return 'http://localhost:8501/'
-    except:
-        pass
-    
-    # 4. Varsayılan: Streamlit Cloud URL (production için)
-    return streamlit_cloud_url
-
-# İlk yüklemede redirect URI'yi belirle
-REDIRECT_URI = get_redirect_uri()
+    # 3. Varsayılan: Her zaman Streamlit Cloud URL'si kullan (production)
+    # Streamlit Cloud'da çalışıyorsa bu kullanılacak
+    return STREAMLIT_CLOUD_URL
 
 # Google Ads yapılandırması
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
