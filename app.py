@@ -29,7 +29,8 @@ def get_redirect_uri():
     """Mevcut sayfa URL'sine göre redirect URI belirle"""
     # Development modu kontrolü (sadece localhost için)
     # Eğer USE_LOCALHOST environment variable set edilmişse, localhost kullan
-    if os.getenv('USE_LOCALHOST', '').lower() == 'true':
+    use_localhost = os.getenv('USE_LOCALHOST', '').lower() == 'true'
+    if use_localhost:
         return 'http://localhost:8501/'
     
     # Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
@@ -39,6 +40,7 @@ def get_redirect_uri():
     
     # Varsayılan: Her zaman Streamlit Cloud URL'si kullan (production)
     # Streamlit Cloud'da çalışıyorsa bu kullanılacak
+    # NOT: Localhost'ta test etmek için USE_LOCALHOST=true set edin
     return STREAMLIT_CLOUD_URL
 
 # Google Ads yapılandırması
@@ -380,7 +382,25 @@ def render_seo_search_console():
     query_params = st.query_params
     if 'code' in query_params and credentials is None:
         try:
-            flow = get_flow()
+            # OAuth callback geldiğinde, redirect URI'yi tekrar belirle
+            # Callback Streamlit Cloud'dan geliyorsa, Streamlit Cloud URL'si kullanılmalı
+            redirect_uri = get_redirect_uri()
+            
+            # Flow'u callback için yeniden oluştur (doğru redirect URI ile)
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": CLIENT_ID,
+                        "client_secret": CLIENT_SECRET,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [redirect_uri]
+                    }
+                },
+                scopes=SCOPES,
+                redirect_uri=redirect_uri
+            )
+            
             authorization_code = query_params['code']
             flow.fetch_token(code=authorization_code)
             credentials = flow.credentials
@@ -388,6 +408,10 @@ def render_seo_search_console():
             st.rerun()
         except Exception as e:
             st.error(f"Yetkilendirme hatası: {e}")
+            st.error(f"Detay: {str(e)}")
+            # Debug bilgisi
+            st.info(f"🔍 Kullanılan Redirect URI: {get_redirect_uri()}")
+            st.info(f"🔍 Query params: {dict(query_params)}")
 
     if credentials is None:
         st.info("Google Search Console'a bağlanmak için aşağıdaki butona tıklayın.")
