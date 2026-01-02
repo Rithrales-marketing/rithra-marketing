@@ -21,18 +21,8 @@ load_dotenv()
 CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
-# Redirect URI - Streamlit Cloud URL'si (production)
-STREAMLIT_CLOUD_URL = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
-
-def get_redirect_uri():
-    """Redirect URI belirle - Sadece Streamlit Cloud URL'si kullan"""
-    # Environment variable'dan Streamlit Cloud URL'sini al (Streamlit Cloud Secrets'da set edilebilir)
-    streamlit_url = os.getenv('STREAMLIT_CLOUD_URL')
-    if streamlit_url:
-        return streamlit_url.rstrip('/') + '/'
-    
-    # Varsayılan: Streamlit Cloud URL'si (her zaman)
-    return STREAMLIT_CLOUD_URL
+# Redirect URI - Streamlit Cloud URL'si (production - hardcoded)
+REDIRECT_URI = 'https://rithra-marketing-46gzjurpv5ql9uappjajb6x.streamlit.app/'
 
 # Google Ads yapılandırması
 GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
@@ -57,9 +47,7 @@ st.set_page_config(
 
 def get_flow():
     """OAuth flow nesnesini oluştur"""
-    # Runtime'da redirect URI'yi belirle (Streamlit Cloud için)
-    redirect_uri = get_redirect_uri()
-    
+    # Her zaman Streamlit Cloud URL'sini kullan
     flow = Flow.from_client_config(
         {
             "web": {
@@ -67,11 +55,11 @@ def get_flow():
                 "client_secret": CLIENT_SECRET,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [redirect_uri]
+                "redirect_uris": [REDIRECT_URI]
             }
         },
         scopes=SCOPES,
-        redirect_uri=redirect_uri
+        redirect_uri=REDIRECT_URI
     )
     return flow
 
@@ -375,9 +363,7 @@ def render_seo_search_console():
         try:
             # OAuth callback geldiğinde, redirect URI'yi tekrar belirle
             # Callback Streamlit Cloud'dan geliyorsa, Streamlit Cloud URL'si kullanılmalı
-            redirect_uri = get_redirect_uri()
-            
-            # Flow'u callback için yeniden oluştur (doğru redirect URI ile)
+            # Flow'u callback için yeniden oluştur (Streamlit Cloud URL ile)
             flow = Flow.from_client_config(
                 {
                     "web": {
@@ -385,11 +371,11 @@ def render_seo_search_console():
                         "client_secret": CLIENT_SECRET,
                         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                         "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": [redirect_uri]
+                        "redirect_uris": [REDIRECT_URI]
                     }
                 },
                 scopes=SCOPES,
-                redirect_uri=redirect_uri
+                redirect_uri=REDIRECT_URI
             )
             
             authorization_code = query_params['code']
@@ -402,7 +388,7 @@ def render_seo_search_console():
             error_msg = str(e)
             if "redirect_uri_mismatch" in error_msg.lower():
                 st.error("❌ Redirect URI uyumsuzluğu!")
-                st.warning(f"Kullanılan Redirect URI: {get_redirect_uri()}")
+                st.warning(f"Kullanılan Redirect URI: {REDIRECT_URI}")
                 st.info("""
                 **Çözüm:**
                 1. Google Cloud Console'da OAuth 2.0 Client ID'nizi kontrol edin
