@@ -28,14 +28,94 @@ st.markdown("""
         padding: 1rem 2rem;
     }
     
-    /* Sidebar Stil - Gradient Mavi ve Okunabilir Metinler */
+    /* Sidebar Stil - Modern Mavi Tasarım */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 0 !important;
     }
     
     /* Sidebar içindeki tüm metinleri beyaz yap */
     [data-testid="stSidebar"] * {
         color: white !important;
+    }
+    
+    /* Sidebar container padding */
+    [data-testid="stSidebar"] > div:first-child {
+        padding: 1.5rem 1rem !important;
+    }
+    
+    /* Modern menü öğeleri - Yuvarlatılmış, temiz tasarım */
+    .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        margin: 0.25rem 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: white !important;
+        background-color: transparent;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    
+    .sidebar-menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .sidebar-menu-item.active {
+        background-color: rgba(255, 255, 255, 0.25);
+        font-weight: 600;
+    }
+    
+    .sidebar-menu-item-icon {
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+    
+    /* Collection öğeleri - Renkli noktalarla */
+    .collection-item {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 1rem;
+        margin: 0.2rem 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 0.9rem;
+    }
+    
+    .collection-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .collection-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 0.75rem;
+    }
+    
+    /* Bölüm başlıkları */
+    .sidebar-section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.6) !important;
+        margin: 1.5rem 0 0.5rem 0;
+        padding: 0 1rem;
+    }
+    
+    /* Divider */
+    .sidebar-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
+        margin: 1rem 0;
+        border: none;
     }
     
     /* Sidebar başlıkları */
@@ -62,16 +142,29 @@ st.markdown("""
         margin: 1rem 0 !important;
     }
     
-    /* Sidebar butonları - beyaz metin */
+    /* Sidebar butonları - Modern tasarım */
     [data-testid="stSidebar"] .stButton > button {
         color: white !important;
-        background: rgba(255, 255, 255, 0.15) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        text-align: left !important;
+        font-weight: 500 !important;
+        margin: 0.25rem 0 !important;
+        transition: all 0.2s ease !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
     }
     
     [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+    
+    /* Aktif buton stili */
+    [data-testid="stSidebar"] .stButton > button[kind=""]:focus {
         background: rgba(255, 255, 255, 0.25) !important;
-        border-color: rgba(255, 255, 255, 0.5) !important;
+        font-weight: 600 !important;
     }
     
     /* Sidebar input alanları */
@@ -353,102 +446,100 @@ def main():
         return
     
     # Giriş yapılmışsa ana uygulamayı göster
-    # Sidebar menü - Modern ve mobil uyumlu
+    # Sidebar menü - Modern tasarım (görseldeki gibi)
     with st.sidebar:
-        st.markdown("""
-        <div style="text-align: center; padding: 1rem 0;">
-            <h1 style="color: white; margin: 0; font-size: 1.8rem;">📊 Marketing SaaS</h1>
-            <p style="color: rgba(255,255,255,0.8); margin: 0.5rem 0 0 0;">Dashboard</p>
+        # Üst bölüm - Kullanıcı adı ve logo
+        username = st.session_state.get('username', 'User')
+        st.markdown(f"""
+        <div style="padding: 1rem 1rem 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.2rem; font-weight: 600; color: white;">{username}'s</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("---")
         
-        # Menü renkleri - Mavi arka plan ve çerçeveli tasarım
-        menu_styles = {
-            "container": {
-                "padding": "0!important",
-                "background-color": "transparent",
-                "margin-top": "1rem"
-            },
-            "icon": {
-                "font-size": "20px",
-                "margin-right": "10px",
-                "color": "white"
-            },
-            "nav-link": {
-                "font-size": "16px",
-                "text-align": "left",
-                "margin": "8px 0",
-                "padding": "12px 15px",
-                "border-radius": "10px",
-                "color": "white !important",
-                "background-color": "rgba(30, 58, 138, 0.6)",
-                "border": "2px solid rgba(255, 255, 255, 0.3)",
-                "transition": "all 0.3s ease",
-                "font-weight": "500"
-            },
-            "nav-link:hover": {
-                "background-color": "rgba(59, 130, 246, 0.8)",
-                "color": "white !important",
-                "border-color": "rgba(255, 255, 255, 0.6)",
-                "transform": "translateX(5px)",
-                "box-shadow": "0 4px 12px rgba(0, 0, 0, 0.2)"
-            },
-            "nav-link-selected": {
-                "background-color": "rgba(59, 130, 246, 0.9)",
-                "color": "white !important",
-                "font-weight": "700",
-                "border": "2px solid rgba(255, 255, 255, 0.8)",
-                "box-shadow": "0 4px 16px rgba(0, 0, 0, 0.3)"
-            }
+        # New Chat butonu (opsiyonel - gelecekte eklenebilir)
+        # st.markdown("""
+        # <div style="padding: 0.5rem 1rem; display: flex; align-items: center; cursor: pointer; border-radius: 8px; margin: 0.5rem 0;">
+        #     <span style="margin-right: 0.5rem;">➕</span>
+        #     <span style="color: white;">New chat</span>
+        # </div>
+        # """, unsafe_allow_html=True)
+        
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+        
+        # Ana navigasyon menüsü
+        menu_items = [
+            ("Genel Bakış", "🏠"),
+            ("SEO", "🔍"),
+            ("Google Ads", "💰"),
+            ("Meta Ads", "📱"),
+        ]
+        
+        # Session state'te seçili menüyü sakla
+        if 'selected_menu' not in st.session_state:
+            st.session_state['selected_menu'] = "Genel Bakış"
+        
+        # Aktif menü için CSS ekle
+        active_menu = st.session_state.get('selected_menu', 'Genel Bakış')
+        menu_key_map = {
+            'Genel Bakış': 'menu_Genel Bakış',
+            'SEO': 'menu_SEO',
+            'Google Ads': 'menu_Google Ads',
+            'Meta Ads': 'menu_Meta Ads',
+            'Ayarlar': 'menu_Ayarlar'
         }
-        
-        selected = option_menu(
-            menu_title=None,
-            options=["Genel Bakış", "SEO", "Google Ads", "Meta Ads", "Ayarlar"],
-            icons=["house", "search", "currency-dollar", "facebook", "gear"],
-            menu_icon="cast",
-            default_index=0,
-            styles=menu_styles
-        )
-        
-        # Seçili menüye göre dinamik renk vurgusu - Gradient arka plan ve çerçeve
-        color_map = {
-            "Genel Bakış": "linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)",
-            "SEO": "linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)",
-            "Google Ads": "linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%)",
-            "Meta Ads": "linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)",
-            "Ayarlar": "linear-gradient(135deg, rgba(107, 114, 128, 0.9) 0%, rgba(75, 85, 99, 0.9) 100%)"
-        }
-        
-        selected_color = color_map.get(selected, "linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(79, 70, 229, 0.9) 100%)")
-        
+        active_key = menu_key_map.get(active_menu, 'menu_Genel Bakış')
         st.markdown(f"""
         <style>
-        [data-testid="stSidebar"] [aria-selected="true"],
-        [data-testid="stSidebar"] .nav-link-selected {{
-            background: {selected_color} !important;
-            color: white !important;
-            border: 2px solid rgba(255, 255, 255, 0.8) !important;
-            font-weight: 700 !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+        button[data-testid*="baseButton-{active_key}"] {{
+            background-color: rgba(255, 255, 255, 0.25) !important;
+            font-weight: 600 !important;
         }}
         </style>
         """, unsafe_allow_html=True)
         
-        # Logout butonu
-        st.markdown("---")
-        st.markdown(f"""
-        <div style="padding: 1rem 0; text-align: center;">
-            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
-                👤 {st.session_state.get('username', 'User')}
-            </p>
+        # Menü öğelerini göster - Butonlar ile
+        for item_name, icon in menu_items:
+            if st.button(f"{icon} {item_name}", key=f"menu_{item_name}", use_container_width=True):
+                st.session_state['selected_menu'] = item_name
+                st.rerun()
+        
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+        
+        # Collections bölümü
+        st.markdown('<div class="sidebar-section-title">Collections</div>', unsafe_allow_html=True)
+        
+        collections = [
+            ("Commercial", "#ef4444"),  # Kırmızı
+            ("Operations", "#3b82f6"),  # Mavi
+            ("Product", "#10b981"),     # Yeşil
+        ]
+        
+        for collection_name, color in collections:
+            st.markdown(f"""
+            <div class="collection-item">
+                <div class="collection-dot" style="background-color: {color};"></div>
+                <span>{collection_name}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="collection-item" style="color: rgba(255,255,255,0.6) !important; font-size: 0.85rem;">
+            <span>+ Add collection</span>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🚪 Çıkış Yap", use_container_width=True, key="logout_btn"):
-            logout()
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+        
+        # Alt kısım - Settings
+        is_settings_active = st.session_state['selected_menu'] == "Ayarlar"
+        if st.button("⚙️ Ayarlar", key="menu_Ayarlar", use_container_width=True):
+            st.session_state['selected_menu'] = "Ayarlar"
             st.rerun()
+        
+        # Seçili menüyü kontrol et ve sayfayı render et
+        selected = st.session_state.get('selected_menu', 'Genel Bakış')
     
     # Sayfa yönlendirme
     if selected == "Genel Bakış":
