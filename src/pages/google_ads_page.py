@@ -320,67 +320,67 @@ def render_google_ads():
                                     campaigns_data = st.session_state['google_ads_campaigns_data']
                                     
                                     if campaigns_data:
-                                df = pd.DataFrame(campaigns_data)
-                                
-                                # Toplamları hesapla
-                                total_spend = df['Maliyet ($)'].sum()
-                                total_impressions = df['Gösterim'].sum()
-                                total_clicks = df['Tıklama'].sum()
-                                total_conversions = df['Dönüşüm'].sum()
-                                # CTR zaten yüzde olarak hesaplanmış
-                                avg_ctr = df['CTR'].mean() if len(df) > 0 else 0
-                                avg_cpc = df['Ortalama CPC ($)'].mean() if len(df) > 0 else 0
-                                
-                                # Tabloyu göster
-                                st.markdown("### 📋 Kampanya Performansı")
-                                st.dataframe(
-                                    df,
-                                    use_container_width=True,
-                                    hide_index=True,
-                                    column_config={
-                                        'Kampanya ID': st.column_config.NumberColumn('Kampanya ID', format='%d'),
-                                        'Kampanya Adı': st.column_config.TextColumn('Kampanya Adı', width='large'),
-                                        'Durum': st.column_config.TextColumn('Durum', width='small'),
-                                        'Gösterim': st.column_config.NumberColumn('Gösterim', format='%d'),
-                                        'Tıklama': st.column_config.NumberColumn('Tıklama', format='%d'),
-                                        'Maliyet ($)': st.column_config.NumberColumn('Maliyet ($)', format='$%.2f'),
-                                        'Dönüşüm': st.column_config.NumberColumn('Dönüşüm', format='%d'),
-                                        'CTR': st.column_config.NumberColumn('CTR', format='%.2f%%'),
-                                        'Ortalama CPC ($)': st.column_config.NumberColumn('Ortalama CPC ($)', format='$%.2f'),
-                                        'Dönüşüm Başına Maliyet ($)': st.column_config.NumberColumn('Dönüşüm Başına Maliyet ($)', format='$%.2f')
-                                    }
-                                )
-                                
-                                # Genel özet metrikleri
-                                st.markdown("### 📈 Genel Özet İstatistikler")
-                                col1, col2, col3, col4, col5, col6 = st.columns(6)
-                                
-                                with col1:
-                                    st.metric("Toplam Harcama", f"${total_spend:,.2f}")
-                                
-                                with col2:
-                                    st.metric("Toplam Gösterim", f"{total_impressions:,}")
-                                
-                                with col3:
-                                    st.metric("Toplam Tıklama", f"{total_clicks:,}")
-                                
-                                with col4:
-                                    st.metric("Toplam Dönüşüm", f"{total_conversions:,}")
-                                
-                                with col5:
-                                    # CTR zaten yüzde olarak hesaplanmış
-                                    st.metric("Ortalama CTR", f"{avg_ctr:.2f}%")
-                                
-                                with col6:
-                                    st.metric("Ortalama CPC", f"${avg_cpc:.2f}")
-                                
-                                # Session state'e kaydet (dashboard için)
-                                st.session_state['google_ads_total_spend'] = total_spend
-                                st.session_state['google_ads_data'] = df
-                                
-                                st.success(f"✅ {len(df)} kampanya verisi başarıyla yüklendi!")
-                            else:
-                                st.warning("⚠️ Seçilen tarih aralığında kampanya verisi bulunamadı.")
+                                        df = pd.DataFrame(campaigns_data)
+                                        
+                                        # Toplamları hesapla
+                                        total_spend = df['Maliyet ($)'].sum()
+                                        total_impressions = df['Gösterim'].sum()
+                                        total_clicks = df['Tıklama'].sum()
+                                        total_conversions = df['Dönüşüm'].sum()
+                                        # CTR zaten yüzde olarak hesaplanmış
+                                        avg_ctr = df['CTR'].mean() if len(df) > 0 else 0
+                                        avg_cpc = df['Ortalama CPC ($)'].mean() if len(df) > 0 else 0
+                                        
+                                        # Tabloyu göster
+                                        st.markdown("### 📋 Kampanya Performansı")
+                                        st.dataframe(
+                                            df,
+                                            use_container_width=True,
+                                            hide_index=True,
+                                            column_config={
+                                                'Kampanya ID': st.column_config.NumberColumn('Kampanya ID', format='%d'),
+                                                'Kampanya Adı': st.column_config.TextColumn('Kampanya Adı', width='large'),
+                                                'Durum': st.column_config.TextColumn('Durum', width='small'),
+                                                'Gösterim': st.column_config.NumberColumn('Gösterim', format='%d'),
+                                                'Tıklama': st.column_config.NumberColumn('Tıklama', format='%d'),
+                                                'Maliyet ($)': st.column_config.NumberColumn('Maliyet ($)', format='$%.2f'),
+                                                'Dönüşüm': st.column_config.NumberColumn('Dönüşüm', format='%d'),
+                                                'CTR': st.column_config.NumberColumn('CTR', format='%.2f%%'),
+                                                'Ortalama CPC ($)': st.column_config.NumberColumn('Ortalama CPC ($)', format='$%.2f'),
+                                                'Dönüşüm Başına Maliyet ($)': st.column_config.NumberColumn('Dönüşüm Başına Maliyet ($)', format='$%.2f')
+                                            }
+                                        )
+                                        
+                                        # Genel özet metrikleri
+                                        st.markdown("### 📈 Genel Özet İstatistikler")
+                                        col1, col2, col3, col4, col5, col6 = st.columns(6)
+                                        
+                                        with col1:
+                                            st.metric("Toplam Harcama", f"${total_spend:,.2f}")
+                                        
+                                        with col2:
+                                            st.metric("Toplam Gösterim", f"{total_impressions:,}")
+                                        
+                                        with col3:
+                                            st.metric("Toplam Tıklama", f"{total_clicks:,}")
+                                        
+                                        with col4:
+                                            st.metric("Toplam Dönüşüm", f"{total_conversions:,}")
+                                        
+                                        with col5:
+                                            # CTR zaten yüzde olarak hesaplanmış
+                                            st.metric("Ortalama CTR", f"{avg_ctr:.2f}%")
+                                        
+                                        with col6:
+                                            st.metric("Ortalama CPC", f"${avg_cpc:.2f}")
+                                        
+                                        # Session state'e kaydet (dashboard için)
+                                        st.session_state['google_ads_total_spend'] = total_spend
+                                        st.session_state['google_ads_data'] = df
+                                        
+                                        st.success(f"✅ {len(df)} kampanya verisi başarıyla yüklendi!")
+                                    else:
+                                        st.warning("⚠️ Seçilen tarih aralığında kampanya verisi bulunamadı.")
             else:
                 st.error("❌ Google Ads client oluşturulamadı. Lütfen API bilgilerini kontrol edin.")
                 
