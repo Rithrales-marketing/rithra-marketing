@@ -21,7 +21,10 @@ META_APP_ID = os.getenv('META_APP_ID')
 META_APP_SECRET = os.getenv('META_APP_SECRET')
 
 # OAuth 2.0 kapsamları
-SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/webmasters.readonly',  # Google Search Console
+    'https://www.googleapis.com/auth/adwords'  # Google Ads
+]
 
 # Meta Ads hesap ID'leri
 META_ACCOUNT_IDS = ['act_1301566494721561', 'act_924782866177345']

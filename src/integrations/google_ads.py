@@ -1,5 +1,10 @@
 """Google Ads entegrasyonu"""
 import streamlit as st
+from google.ads.googleads.client import GoogleAdsClient
+from google.ads.googleads.errors import GoogleAdsException
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from datetime import datetime, timedelta
 from src.config import (
     GOOGLE_ADS_DEVELOPER_TOKEN,
     GOOGLE_ADS_CUSTOMER_ID,
@@ -8,24 +13,190 @@ from src.config import (
 )
 
 
-def get_google_ads_client():
-    """Google Ads API client'ı oluştur (iskelet)"""
-    # TODO: Google Ads API entegrasyonu
-    # from google.ads.googleads.client import GoogleAdsClient
-    # client = GoogleAdsClient.load_from_dict({
-    #     "developer_token": GOOGLE_ADS_DEVELOPER_TOKEN,
-    #     "client_id": GOOGLE_CLIENT_ID,
-    #     "client_secret": GOOGLE_CLIENT_SECRET,
-    #     "refresh_token": "...",
-    #     "use_proto_plus": True
-    # })
-    # return client
+def get_google_ads_credentials():
+    """Session state'ten Google Ads credentials al"""
+    if 'google_ads_credentials' in st.session_state:
+        creds_dict = st.session_state['google_ads_credentials']
+        return Credentials.from_authorized_user_info(creds_dict)
     return None
+
+
+def save_google_ads_credentials(credentials):
+    """Google Ads credentials'ı session state'e kaydet"""
+    st.session_state['google_ads_credentials'] = {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
+
+
+def get_google_ads_client():
+    """Google Ads API client'ı oluştur"""
+    if not GOOGLE_ADS_DEVELOPER_TOKEN or not GOOGLE_ADS_CUSTOMER_ID:
+        return None
+    
+    credentials = get_google_ads_credentials()
+    if not credentials:
+        return None
+    
+    # Token'ı yenile
+    if credentials.expired and credentials.refresh_token:
+        try:
+            credentials.refresh(Request())
+            save_google_ads_credentials(credentials)
+        except Exception as e:
+            st.error(f"Token yenileme hatası: {e}")
+            return None
+    
+    try:
+        # Google Ads API client'ı oluştur
+        client = GoogleAdsClient.load_from_dict({
+            "developer_token": GOOGLE_ADS_DEVELOPER_TOKEN,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": credentials.refresh_token,
+            "use_proto_plus": True
+        })
+        return client
+    except Exception as e:
+        st.error(f"Google Ads client oluşturma hatası: {e}")
+        return None
+
+
+def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
+    """Kampanya performans verilerini çek"""
+    if not client or not customer_id:
+        return []
+    
+    # Customer ID formatını düzelt (tire varsa kaldır, 10 haneli olmalı)
+    customer_id = str(customer_id).replace('-', '')
+    if len(customer_id) != 10:
+        st.error(f"Geçersiz Customer ID formatı: {customer_id}. 10 haneli olmalı.")
+        return []
+    
+    # Varsayılan tarih aralığı: Son 30 gün
+    if not end_date:
+        end_date = datetime.now().date()
+    if not start_date:
+        start_date = end_date - timedelta(days=30)
+    
+    try:
+        ga_service = client.get_service("GoogleAdsService")
+        
+        # Sorgu oluştur - segments.date ile günlük veri çek
+        query = f"""
+            SELECT
+                campaign.id,
+                campaign.name,
+                campaign.status,
+                segments.date,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.ctr,
+                metrics.average_cpc,
+                metrics.cost_per_conversion
+            FROM campaign
+            WHERE campaign.status != 'REMOVED'
+            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
+            ORDER BY campaign.id, segments.date
+        """
+        
+        # İstek gönder
+        response = ga_service.search(customer_id=customer_id, query=query)
+        
+        campaigns_data = []
+        campaign_dict = {}
+        
+        for row in response:
+            campaign_id = row.campaign.id
+            campaign_name = row.campaign.name
+            
+            if campaign_id not in campaign_dict:
+                campaign_dict[campaign_id] = {
+                    'Kampanya ID': campaign_id,
+                    'Kampanya Adı': campaign_name,
+                    'Durum': row.campaign.status.name,
+                    'Gösterim': 0,
+                    'Tıklama': 0,
+                    'Maliyet ($)': 0.0,
+                    'Dönüşüm': 0.0,
+                    'CTR': 0.0,
+                    'Ortalama CPC ($)': 0.0,
+                    'Dönüşüm Başına Maliyet ($)': 0.0,
+                    'Günlük Kayıt Sayısı': 0
+                }
+            
+            # Metrikleri topla
+            if row.metrics.impressions:
+                campaign_dict[campaign_id]['Gösterim'] += row.metrics.impressions
+            if row.metrics.clicks:
+                campaign_dict[campaign_id]['Tıklama'] += row.metrics.clicks
+            if row.metrics.cost_micros:
+                campaign_dict[campaign_id]['Maliyet ($)'] += row.metrics.cost_micros / 1_000_000
+            if row.metrics.conversions:
+                campaign_dict[campaign_id]['Dönüşüm'] += row.metrics.conversions
+            
+            # Ortalama değerler (son değerleri kullan)
+            if row.metrics.ctr is not None:
+                campaign_dict[campaign_id]['CTR'] = row.metrics.ctr
+            if row.metrics.average_cpc is not None:
+                campaign_dict[campaign_id]['Ortalama CPC ($)'] = row.metrics.average_cpc / 1_000_000
+            if row.metrics.cost_per_conversion is not None and row.metrics.cost_per_conversion > 0:
+                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet ($)'] = row.metrics.cost_per_conversion / 1_000_000
+            
+            campaign_dict[campaign_id]['Günlük Kayıt Sayısı'] += 1
+        
+        # CTR'yi hesapla (toplam tıklama / toplam gösterim * 100)
+        for campaign_id in campaign_dict:
+            if campaign_dict[campaign_id]['Gösterim'] > 0:
+                campaign_dict[campaign_id]['CTR'] = (
+                    campaign_dict[campaign_id]['Tıklama'] / 
+                    campaign_dict[campaign_id]['Gösterim'] * 100
+                )
+            # Ortalama CPC'yi hesapla
+            if campaign_dict[campaign_id]['Tıklama'] > 0:
+                campaign_dict[campaign_id]['Ortalama CPC ($)'] = (
+                    campaign_dict[campaign_id]['Maliyet ($)'] / 
+                    campaign_dict[campaign_id]['Tıklama']
+                )
+            # Dönüşüm başına maliyeti hesapla
+            if campaign_dict[campaign_id]['Dönüşüm'] > 0:
+                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet ($)'] = (
+                    campaign_dict[campaign_id]['Maliyet ($)'] / 
+                    campaign_dict[campaign_id]['Dönüşüm']
+                )
+            
+            # Günlük kayıt sayısını kaldır (gösterim için değil)
+            del campaign_dict[campaign_id]['Günlük Kayıt Sayısı']
+        
+        campaigns_data = list(campaign_dict.values())
+        # Maliyete göre sırala
+        campaigns_data.sort(key=lambda x: x['Maliyet ($)'], reverse=True)
+        return campaigns_data
+        
+    except GoogleAdsException as ex:
+        error_message = ""
+        for error in ex.failure.errors:
+            error_message += f"Error {error.error_code.error_code}: {error.message}\n"
+            if error.location:
+                for field_path_element in error.location.field_path_elements:
+                    error_message += f"  Field: {field_path_element.field_name}\n"
+        st.error(f"Google Ads API hatası:\n{error_message}")
+        return []
+    except Exception as e:
+        st.error(f"Beklenmeyen hata: {e}")
+        import traceback
+        st.error(f"Detay: {traceback.format_exc()}")
+        return []
 
 
 def get_google_ads_total_spend():
     """Google Ads toplam harcamasını getir"""
-    # TODO: Google Ads API'den harcama verisi çek
     if 'google_ads_total_spend' in st.session_state:
         return st.session_state['google_ads_total_spend']
     return 0.0

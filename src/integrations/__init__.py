@@ -10,7 +10,10 @@ from .google_search_console import (
 
 from .google_ads import (
     get_google_ads_client,
-    get_google_ads_total_spend
+    get_google_ads_total_spend,
+    get_google_ads_credentials,
+    save_google_ads_credentials,
+    get_campaigns_data
 )
 
 from .meta_ads import (
@@ -30,6 +33,9 @@ __all__ = [
     # Google Ads
     'get_google_ads_client',
     'get_google_ads_total_spend',
+    'get_google_ads_credentials',
+    'save_google_ads_credentials',
+    'get_campaigns_data',
     # Meta Ads
     'get_meta_ads_insights_for_account',
     'get_all_meta_ads_data',
