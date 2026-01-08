@@ -221,16 +221,16 @@ def list_customer_accounts(client, manager_customer_id=None):
         # customer_client tablosu MCC hesabının altındaki tüm hesapları gösterir
         query = """
             SELECT
-                customer_client.client_customer.id,
-                customer_client.client_customer.descriptive_name,
-                customer_client.client_customer.currency_code,
-                customer_client.client_customer.time_zone,
+                customer_client.id,
+                customer_client.descriptive_name,
+                customer_client.currency_code,
+                customer_client.time_zone,
                 customer_client.manager,
                 customer_client.test_account,
-                customer_client.client_customer.status
+                customer_client.status
             FROM customer_client
             WHERE customer_client.status = 'ENABLED'
-            ORDER BY customer_client.client_customer.descriptive_name
+            ORDER BY customer_client.descriptive_name
         """
         
         # İstek gönder - Manager hesabından müşteri hesaplarını çek
@@ -238,13 +238,13 @@ def list_customer_accounts(client, manager_customer_id=None):
         
         customer_accounts = []
         for row in response:
-            customer_id = row.customer_client.client_customer.id
-            customer_name = row.customer_client.client_customer.descriptive_name
-            currency = row.customer_client.client_customer.currency_code
-            timezone = row.customer_client.client_customer.time_zone
+            customer_id = row.customer_client.id
+            customer_name = row.customer_client.descriptive_name
+            currency = row.customer_client.currency_code
+            timezone = row.customer_client.time_zone
             is_manager = row.customer_client.manager
             is_test = row.customer_client.test_account
-            status = row.customer_client.client_customer.status.name if hasattr(row.customer_client.client_customer.status, 'name') else str(row.customer_client.client_customer.status)
+            status = row.customer_client.status.name if hasattr(row.customer_client.status, 'name') else str(row.customer_client.status)
             
             # Manager hesaplarını atla - sadece müşteri hesaplarını göster
             # Manager hesaplarından metrik çekilemez
