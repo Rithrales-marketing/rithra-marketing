@@ -41,6 +41,7 @@ def render_seo_search_console():
     credentials = get_credentials()
 
     # URL parametrelerinden authorization code'u kontrol et
+    # OAuth callback sadece credentials kaydetmek için, authentication durumunu etkilemez
     query_params = st.query_params
     if 'code' in query_params and credentials is None:
         try:
@@ -63,6 +64,16 @@ def render_seo_search_console():
             flow.fetch_token(code=authorization_code)
             credentials = flow.credentials
             save_credentials(credentials)
+            
+            # Query params'ı temizle (OAuth callback parametrelerini kaldır)
+            # Bu sayede sayfa yenilendiğinde tekrar OAuth callback olarak algılanmaz
+            # ve authentication durumu korunur
+            params_to_remove = ['code', 'state', 'scope']
+            for param in params_to_remove:
+                if param in st.query_params:
+                    del st.query_params[param]
+            
+            # Sayfayı yenile - authentication durumu korunacak
             st.rerun()
         except Exception as e:
             st.error(f"Yetkilendirme hatası: {e}")

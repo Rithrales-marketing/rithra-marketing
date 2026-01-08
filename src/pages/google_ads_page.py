@@ -87,6 +87,16 @@ def render_google_ads():
             credentials = flow.credentials
             save_google_ads_credentials(credentials)
             st.session_state['google_ads_connected'] = True
+            
+            # Query params'ı temizle (OAuth callback parametrelerini kaldır)
+            # Bu sayede sayfa yenilendiğinde tekrar OAuth callback olarak algılanmaz
+            # ve authentication durumu korunur
+            params_to_remove = ['code', 'state', 'scope']
+            for param in params_to_remove:
+                if param in st.query_params:
+                    del st.query_params[param]
+            
+            # Sayfayı yenile - authentication durumu korunacak
             st.rerun()
         except Exception as e:
             st.error(f"Yetkilendirme hatası: {e}")
@@ -180,9 +190,13 @@ def render_google_ads():
                             customer_accounts = list_customer_accounts(client, GOOGLE_ADS_CUSTOMER_ID)
                             if customer_accounts:
                                 st.session_state['google_ads_customer_accounts'] = customer_accounts
+                                # İlk müşteri hesabını otomatik seç
+                                if customer_accounts:
+                                    st.session_state['selected_customer_id'] = customer_accounts[0]['Customer ID']
                                 st.success(f"✅ {len(customer_accounts)} müşteri hesabı bulundu!")
+                                st.rerun()
                             else:
-                                st.warning("⚠️ Müşteri hesabı bulunamadı veya MCC hesabı değil.")
+                                st.warning("⚠️ Müşteri hesabı bulunamadı. MCC hesabının altında müşteri hesabı olmayabilir.")
                 
                 with col_filter:
                     show_test_accounts = st.checkbox("Test Hesaplarını Göster", value=False, key="show_test_accounts")
@@ -233,53 +247,79 @@ def render_google_ads():
                         st.info(f"✅ Seçili hesap: **{selected_customer_option}**")
                 
                 else:
-                    # Varsayılan olarak config'deki customer ID'yi kullan
-                    selected_customer_id = GOOGLE_ADS_CUSTOMER_ID
-                    st.session_state['selected_customer_id'] = selected_customer_id
-                    st.info(f"💡 Varsayılan hesap kullanılıyor: **{selected_customer_id}**")
-                    st.info("Müşteri hesaplarını görmek için yukarıdaki 'Müşteri Hesaplarını Yükle' butonuna tıklayın.")
+                    # Müşteri hesapları yüklenmemişse uyarı göster
+                    st.warning("⚠️ Lütfen önce 'Müşteri Hesaplarını Yükle' butonuna tıklayın.")
+                    st.info("""
+                    **Not:** 
+                    - MCC (Manager) hesaplarından direkt metrik çekilemez
+                    - Her müşteri hesabından ayrı ayrı veri çekilmesi gerekir
+                    - Müşteri hesaplarını yükledikten sonra bir hesap seçin
+                    """)
                 
                 st.markdown("---")
                 
                 # Seçili müşteri hesabı için kampanya verilerini göster
-                if 'selected_customer_id' in st.session_state:
+                # Sadece müşteri hesabı seçilmişse veri çek
+                if 'selected_customer_id' in st.session_state and 'google_ads_customer_accounts' in st.session_state:
                     selected_customer_id = st.session_state['selected_customer_id']
                     
-                    st.subheader("📊 Kampanya Performansı")
-                
-                # Tarih aralığı seçimi
-                col1, col2 = st.columns(2)
-                with col1:
-                    default_end = datetime.now().date()
-                    default_start = default_end - timedelta(days=30)
-                    start_date = st.date_input(
-                        "Başlangıç Tarihi",
-                        value=default_start,
-                        max_value=datetime.now().date(),
-                        key='google_ads_start_date'
-                    )
-                
-                with col2:
-                    end_date = st.date_input(
-                        "Bitiş Tarihi",
-                        value=default_end,
-                        max_value=datetime.now().date(),
-                        key='google_ads_end_date'
-                    )
-                
-                if start_date > end_date:
-                    st.error("⚠️ Başlangıç tarihi bitiş tarihinden sonra olamaz!")
-                else:
-                    if st.button("📊 Verileri Getir", type="primary", use_container_width=True, key="google_ads_fetch_btn"):
-                        with st.spinner("Kampanya verileri çekiliyor, lütfen bekleyin..."):
-                            campaigns_data = get_campaigns_data(
-                                client,
-                                selected_customer_id,
-                                start_date,
-                                end_date
+                    # Seçilen ID'nin gerçekten bir müşteri hesabı olduğunu kontrol et
+                    customer_accounts = st.session_state['google_ads_customer_accounts']
+                    valid_customer_ids = [acc['Customer ID'] for acc in customer_accounts]
+                    
+                    if selected_customer_id not in valid_customer_ids:
+                        st.error(f"❌ Seçilen hesap geçersiz veya Manager hesabı. Lütfen bir müşteri hesabı seçin.")
+                        st.info("Manager hesaplarından metrik çekilemez. Lütfen müşteri hesaplarından birini seçin.")
+                    else:
+                        st.subheader("📊 Kampanya Performansı")
+                        st.info(f"📌 Seçili Müşteri Hesabı: **{selected_customer_id}**")
+                        
+                        # Tarih aralığı seçimi
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            default_end = datetime.now().date()
+                            default_start = default_end - timedelta(days=30)
+                            start_date = st.date_input(
+                                "Başlangıç Tarihi",
+                                value=default_start,
+                                max_value=datetime.now().date(),
+                                key='google_ads_start_date'
                             )
+                        
+                        with col2:
+                            end_date = st.date_input(
+                                "Bitiş Tarihi",
+                                value=default_end,
+                                max_value=datetime.now().date(),
+                                key='google_ads_end_date'
+                            )
+                        
+                        if start_date > end_date:
+                            st.error("⚠️ Başlangıç tarihi bitiş tarihinden sonra olamaz!")
+                        else:
+                            if st.button("📊 Verileri Getir", type="primary", use_container_width=True, key="google_ads_fetch_btn"):
+                                with st.spinner(f"Kampanya verileri çekiliyor (Hesap: {selected_customer_id}), lütfen bekleyin..."):
+                                    campaigns_data = get_campaigns_data(
+                                        client,
+                                        selected_customer_id,
+                                        start_date,
+                                        end_date
+                                    )
+                                    
+                                    if campaigns_data:
+                                        # Session state'e kaydet
+                                        st.session_state['google_ads_campaigns_data'] = campaigns_data
+                                        st.session_state['google_ads_selected_customer'] = selected_customer_id
+                                        st.rerun()
+                                    else:
+                                        st.warning("⚠️ Seçilen tarih aralığında kampanya verisi bulunamadı.")
                             
-                            if campaigns_data:
+                            # Session state'ten verileri göster
+                            if 'google_ads_campaigns_data' in st.session_state and 'google_ads_selected_customer' in st.session_state:
+                                if st.session_state['google_ads_selected_customer'] == selected_customer_id:
+                                    campaigns_data = st.session_state['google_ads_campaigns_data']
+                                    
+                                    if campaigns_data:
                                 df = pd.DataFrame(campaigns_data)
                                 
                                 # Toplamları hesapla
