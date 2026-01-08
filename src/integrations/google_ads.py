@@ -306,10 +306,11 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
         ga_service = client.get_service("GoogleAdsService")
         
         # Adım 1: Sadece keyword'den dönüşüm bilgisi - basit sorgu
+        # keyword_view için doğru alan isimleri: keyword_view.text ve keyword_view.match_type
         query = f"""
             SELECT
-                keyword_view.keyword.text,
-                keyword_view.keyword.match_type,
+                keyword_view.text,
+                keyword_view.match_type,
                 ad_group.name,
                 campaign.name,
                 metrics.conversions,
@@ -328,12 +329,12 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
         conversion_details = []
         for row in response:
             try:
-                keyword_text = row.keyword_view.keyword.text if hasattr(row, 'keyword_view') and row.keyword_view else 'N/A'
+                keyword_text = row.keyword_view.text if hasattr(row, 'keyword_view') and row.keyword_view else 'N/A'
             except:
                 keyword_text = 'N/A'
             
             try:
-                match_type = row.keyword_view.keyword.match_type.name if hasattr(row, 'keyword_view') and row.keyword_view and hasattr(row.keyword_view.keyword, 'match_type') else 'N/A'
+                match_type = row.keyword_view.match_type.name if hasattr(row, 'keyword_view') and row.keyword_view and hasattr(row.keyword_view, 'match_type') else 'N/A'
             except:
                 match_type = 'N/A'
             
