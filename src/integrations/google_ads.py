@@ -182,11 +182,92 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
     except GoogleAdsException as ex:
         error_message = ""
         for error in ex.failure.errors:
-            error_message += f"Error {error.error_code.error_code}: {error.message}\n"
-            if error.location:
+            # error_code hatasını düzelt
+            error_code_str = ""
+            try:
+                if hasattr(error, 'error_code') and hasattr(error.error_code, 'error_code'):
+                    error_code_str = f"{error.error_code.error_code}: "
+            except:
+                pass
+            error_message += f"Error {error_code_str}{error.message}\n"
+            if hasattr(error, 'location') and error.location:
                 for field_path_element in error.location.field_path_elements:
                     error_message += f"  Field: {field_path_element.field_name}\n"
         st.error(f"Google Ads API hatası:\n{error_message}")
+        return []
+    except Exception as e:
+        st.error(f"Beklenmeyen hata: {e}")
+        import traceback
+        st.error(f"Detay: {traceback.format_exc()}")
+        return []
+
+
+def list_customer_accounts(client, manager_customer_id=None):
+    """MCC hesabının altındaki müşteri hesaplarını listele"""
+    if not client:
+        return []
+    
+    try:
+        # Eğer manager_customer_id verilmediyse, config'den al
+        if not manager_customer_id:
+            manager_customer_id = GOOGLE_ADS_CUSTOMER_ID
+        
+        # Customer ID formatını düzelt
+        manager_customer_id = str(manager_customer_id).replace('-', '')
+        
+        ga_service = client.get_service("GoogleAdsService")
+        
+        # Müşteri hesaplarını çek
+        query = """
+            SELECT
+                customer.id,
+                customer.descriptive_name,
+                customer.currency_code,
+                customer.time_zone,
+                customer.manager,
+                customer.test_account
+            FROM customer
+            ORDER BY customer.descriptive_name
+        """
+        
+        # İstek gönder - Manager hesabından müşteri hesaplarını çek
+        response = ga_service.search(customer_id=manager_customer_id, query=query)
+        
+        customer_accounts = []
+        for row in response:
+            customer_id = row.customer.id
+            customer_name = row.customer.descriptive_name
+            currency = row.customer.currency_code
+            timezone = row.customer.time_zone
+            is_manager = row.customer.manager
+            is_test = row.customer.test_account
+            
+            # Test hesaplarını atla (opsiyonel)
+            # if is_test:
+            #     continue
+            
+            customer_accounts.append({
+                'Customer ID': str(customer_id),
+                'Hesap Adı': customer_name if customer_name else f"Customer {customer_id}",
+                'Para Birimi': currency if currency else 'N/A',
+                'Zaman Dilimi': timezone if timezone else 'N/A',
+                'Manager': 'Evet' if is_manager else 'Hayır',
+                'Test Hesabı': 'Evet' if is_test else 'Hayır'
+            })
+        
+        return customer_accounts
+        
+    except GoogleAdsException as ex:
+        error_message = ""
+        for error in ex.failure.errors:
+            error_code_str = ""
+            try:
+                if hasattr(error, 'error_code') and hasattr(error.error_code, 'error_code'):
+                    error_code_str = f"{error.error_code.error_code}: "
+            except:
+                pass
+            error_message += f"Error {error_code_str}{error.message}\n"
+        st.error(f"Müşteri hesapları listelenirken hata:\n{error_message}")
         return []
     except Exception as e:
         st.error(f"Beklenmeyen hata: {e}")
