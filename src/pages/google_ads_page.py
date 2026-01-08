@@ -411,17 +411,16 @@ def render_google_ads():
                                         st.markdown("### 📋 Dönüşüm Detayları Tablosu")
                                         
                                         # Arama kutusu
-                                        search_term_filter = st.text_input(
-                                            "🔍 Arama Terimi veya Keyword ile Filtrele:",
+                                        keyword_filter = st.text_input(
+                                            "🔍 Keyword ile Filtrele:",
                                             key="conversion_search_filter",
-                                            placeholder="Arama terimi veya keyword yazın..."
+                                            placeholder="Keyword yazın..."
                                         )
                                         
                                         # Filtreleme
-                                        if search_term_filter:
+                                        if keyword_filter:
                                             filtered_df = conversion_df[
-                                                (conversion_df['Arama Terimi'].str.contains(search_term_filter, case=False, na=False)) |
-                                                (conversion_df['Keyword'].str.contains(search_term_filter, case=False, na=False))
+                                                conversion_df['Keyword'].str.contains(keyword_filter, case=False, na=False)
                                             ]
                                         else:
                                             filtered_df = conversion_df
@@ -433,17 +432,12 @@ def render_google_ads():
                                             hide_index=True,
                                             column_config={
                                                 'Tarih': st.column_config.TextColumn('Tarih', width='small'),
-                                                'Arama Terimi': st.column_config.TextColumn('Arama Terimi', width='medium'),
                                                 'Keyword': st.column_config.TextColumn('Keyword', width='medium'),
                                                 'Eşleşme Türü': st.column_config.TextColumn('Eşleşme Türü', width='small'),
-                                                'Reklam URL': st.column_config.LinkColumn('Reklam URL', width='large'),
-                                                'Reklam ID': st.column_config.NumberColumn('Reklam ID', format='%d'),
                                                 'Reklam Grubu': st.column_config.TextColumn('Reklam Grubu', width='medium'),
                                                 'Kampanya': st.column_config.TextColumn('Kampanya', width='medium'),
-                                                'Dönüşüm Türü': st.column_config.TextColumn('Dönüşüm Türü', width='medium'),
                                                 'Dönüşüm Sayısı': st.column_config.NumberColumn('Dönüşüm Sayısı', format='%d'),
-                                                'Dönüşüm Değeri (₺)': st.column_config.NumberColumn('Dönüşüm Değeri (₺)', format='₺%.2f'),
-                                                'Maliyet (₺)': st.column_config.NumberColumn('Maliyet (₺)', format='₺%.2f')
+                                                'Dönüşüm Değeri (₺)': st.column_config.NumberColumn('Dönüşüm Değeri (₺)', format='₺%.2f')
                                             }
                                         )
                                         
@@ -460,12 +454,12 @@ def render_google_ads():
                                             st.metric("Toplam Dönüşüm Değeri", f"₺{total_conversion_value:,.2f}")
                                         
                                         with col3:
-                                            total_cost = filtered_df['Maliyet (₺)'].sum()
-                                            st.metric("Toplam Maliyet", f"₺{total_cost:,.2f}")
+                                            unique_keywords = filtered_df['Keyword'].nunique()
+                                            st.metric("Benzersiz Keyword", f"{unique_keywords:,}")
                                         
                                         with col4:
-                                            roas = (total_conversion_value / total_cost * 100) if total_cost > 0 else 0
-                                            st.metric("ROAS", f"%{roas:.2f}")
+                                            avg_conversion_value = filtered_df['Dönüşüm Değeri (₺)'].mean() if len(filtered_df) > 0 else 0
+                                            st.metric("Ortalama Dönüşüm Değeri", f"₺{avg_conversion_value:,.2f}")
                                         
                                         st.success(f"✅ {len(filtered_df)} dönüşüm detayı gösteriliyor!")
                                     else:

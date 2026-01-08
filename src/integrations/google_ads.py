@@ -286,7 +286,7 @@ def list_customer_accounts(client, manager_customer_id=None):
 
 
 def get_conversion_details(client, customer_id, start_date=None, end_date=None):
-    """Dönüşüm detaylarını çek - keyword, arama terimi, reklam URL'si ve dönüşüm türü"""
+    """Dönüşüm detaylarını çek - önce sadece keyword'den dönüşüm bilgisi"""
     if not client or not customer_id:
         return []
     
@@ -305,106 +305,37 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
     try:
         ga_service = client.get_service("GoogleAdsService")
         
-        # İlk sorgu: search_term_view'den dönüşüm detaylarını çek
-        query1 = f"""
+        # Adım 1: Sadece keyword'den dönüşüm bilgisi - basit sorgu
+        query = f"""
             SELECT
-                search_term_view.search_term,
-                ad_group.id,
+                keyword_view.keyword.text,
+                keyword_view.keyword.match_type,
                 ad_group.name,
-                campaign.id,
                 campaign.name,
-                segments.conversion_action_name,
                 metrics.conversions,
                 metrics.conversions_value,
-                metrics.cost_micros,
                 segments.date
-            FROM search_term_view
+            FROM keyword_view
             WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
             AND metrics.conversions > 0
             ORDER BY metrics.conversions DESC, segments.date DESC
             LIMIT 10000
         """
         
-        # İkinci sorgu: keyword_view'den keyword bilgilerini çek
-        query2 = f"""
-            SELECT
-                keyword_view.keyword.text,
-                keyword_view.keyword.match_type,
-                ad_group.id,
-                campaign.id,
-                ad_group_ad.ad.final_urls,
-                ad_group_ad.ad.id
-            FROM keyword_view
-            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-            AND metrics.conversions > 0
-            LIMIT 10000
-        """
+        # İstek gönder
+        response = ga_service.search(customer_id=customer_id, query=query)
         
-        # İlk sorguyu çalıştır
-        response1 = ga_service.search(customer_id=customer_id, query=query1)
-        
-        # İkinci sorguyu çalıştır ve keyword bilgilerini bir dictionary'de sakla
-        response2 = ga_service.search(customer_id=customer_id, query=query2)
-        
-        # Keyword bilgilerini bir dictionary'de sakla (ad_group_id + campaign_id -> keyword bilgisi)
-        keyword_map = {}
-        ad_url_map = {}
-        ad_id_map = {}
-        
-        for row in response2:
+        conversion_details = []
+        for row in response:
             try:
                 keyword_text = row.keyword_view.keyword.text if hasattr(row, 'keyword_view') and row.keyword_view else 'N/A'
+            except:
+                keyword_text = 'N/A'
+            
+            try:
                 match_type = row.keyword_view.keyword.match_type.name if hasattr(row, 'keyword_view') and row.keyword_view and hasattr(row.keyword_view.keyword, 'match_type') else 'N/A'
-                ad_group_id = row.ad_group.id if hasattr(row, 'ad_group') and row.ad_group else None
-                campaign_id = row.campaign.id if hasattr(row, 'campaign') and row.campaign else None
-                
-                # Final URLs
-                if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') and hasattr(row.ad_group_ad.ad, 'final_urls'):
-                    final_urls = list(row.ad_group_ad.ad.final_urls)
-                    ad_url = final_urls[0] if final_urls else 'N/A'
-                    ad_id = row.ad_group_ad.ad.id if hasattr(row.ad_group_ad.ad, 'id') else 'N/A'
-                else:
-                    ad_url = 'N/A'
-                    ad_id = 'N/A'
-                
-                if ad_group_id and campaign_id:
-                    key = f"{campaign_id}_{ad_group_id}"
-                    keyword_map[key] = {'keyword': keyword_text, 'match_type': match_type}
-                    ad_url_map[key] = ad_url
-                    ad_id_map[key] = ad_id
-            except Exception as e:
-                continue
-        
-        # İlk sorgudan gelen verileri işle ve keyword bilgilerini ekle
-        conversion_details = []
-        for row in response1:
-            try:
-                search_term = row.search_term_view.search_term if hasattr(row, 'search_term_view') and row.search_term_view else 'N/A'
             except:
-                search_term = 'N/A'
-            
-            try:
-                ad_group_id = row.ad_group.id if hasattr(row, 'ad_group') and row.ad_group else None
-                campaign_id = row.campaign.id if hasattr(row, 'campaign') and row.campaign else None
-            except:
-                ad_group_id = None
-                campaign_id = None
-            
-            # Keyword bilgisini map'ten al
-            keyword_text = 'N/A'
-            match_type = 'N/A'
-            ad_url = 'N/A'
-            ad_id = 'N/A'
-            
-            if ad_group_id and campaign_id:
-                key = f"{campaign_id}_{ad_group_id}"
-                if key in keyword_map:
-                    keyword_text = keyword_map[key]['keyword']
-                    match_type = keyword_map[key]['match_type']
-                if key in ad_url_map:
-                    ad_url = ad_url_map[key]
-                if key in ad_id_map:
-                    ad_id = ad_id_map[key]
+                match_type = 'N/A'
             
             try:
                 ad_group_name = row.ad_group.name if hasattr(row, 'ad_group') and row.ad_group else 'N/A'
@@ -417,11 +348,6 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
                 campaign_name = 'N/A'
             
             try:
-                conversion_action_name = row.segments.conversion_action_name if hasattr(row.segments, 'conversion_action_name') else 'N/A'
-            except:
-                conversion_action_name = 'N/A'
-            
-            try:
                 conversions = row.metrics.conversions if hasattr(row.metrics, 'conversions') and row.metrics.conversions else 0
             except:
                 conversions = 0
@@ -432,28 +358,18 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
                 conversions_value = 0.0
             
             try:
-                cost = row.metrics.cost_micros / 1_000_000 if hasattr(row.metrics, 'cost_micros') and row.metrics.cost_micros else 0.0
-            except:
-                cost = 0.0
-            
-            try:
                 date = str(row.segments.date) if hasattr(row.segments, 'date') else 'N/A'
             except:
                 date = 'N/A'
             
             conversion_details.append({
-                'Tarih': str(date),
-                'Arama Terimi': search_term,
+                'Tarih': date,
                 'Keyword': keyword_text,
                 'Eşleşme Türü': match_type,
-                'Reklam URL': ad_url,
-                'Reklam ID': ad_id,
                 'Reklam Grubu': ad_group_name,
                 'Kampanya': campaign_name,
-                'Dönüşüm Türü': conversion_action_name,
                 'Dönüşüm Sayısı': conversions,
-                'Dönüşüm Değeri (₺)': conversions_value,
-                'Maliyet (₺)': cost
+                'Dönüşüm Değeri (₺)': conversions_value
             })
         
         return conversion_details
