@@ -217,17 +217,20 @@ def list_customer_accounts(client, manager_customer_id=None):
         
         ga_service = client.get_service("GoogleAdsService")
         
-        # Müşteri hesaplarını çek
+        # MCC hesabının altındaki tüm müşteri hesaplarını çek
+        # customer_client tablosu MCC hesabının altındaki tüm hesapları gösterir
         query = """
             SELECT
-                customer.id,
-                customer.descriptive_name,
-                customer.currency_code,
-                customer.time_zone,
-                customer.manager,
-                customer.test_account
-            FROM customer
-            ORDER BY customer.descriptive_name
+                customer_client.client_customer.id,
+                customer_client.client_customer.descriptive_name,
+                customer_client.client_customer.currency_code,
+                customer_client.client_customer.time_zone,
+                customer_client.manager,
+                customer_client.test_account,
+                customer_client.client_customer.status
+            FROM customer_client
+            WHERE customer_client.status = 'ENABLED'
+            ORDER BY customer_client.client_customer.descriptive_name
         """
         
         # İstek gönder - Manager hesabından müşteri hesaplarını çek
@@ -235,16 +238,22 @@ def list_customer_accounts(client, manager_customer_id=None):
         
         customer_accounts = []
         for row in response:
-            customer_id = row.customer.id
-            customer_name = row.customer.descriptive_name
-            currency = row.customer.currency_code
-            timezone = row.customer.time_zone
-            is_manager = row.customer.manager
-            is_test = row.customer.test_account
+            customer_id = row.customer_client.client_customer.id
+            customer_name = row.customer_client.client_customer.descriptive_name
+            currency = row.customer_client.client_customer.currency_code
+            timezone = row.customer_client.client_customer.time_zone
+            is_manager = row.customer_client.manager
+            is_test = row.customer_client.test_account
+            status = row.customer_client.client_customer.status.name if hasattr(row.customer_client.client_customer.status, 'name') else str(row.customer_client.client_customer.status)
             
-            # Test hesaplarını atla (opsiyonel)
-            # if is_test:
-            #     continue
+            # Manager hesaplarını atla - sadece müşteri hesaplarını göster
+            # Manager hesaplarından metrik çekilemez
+            if is_manager:
+                continue
+            
+            # Sadece aktif hesapları göster
+            if status != 'ENABLED':
+                continue
             
             customer_accounts.append({
                 'Customer ID': str(customer_id),
