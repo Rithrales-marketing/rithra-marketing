@@ -36,6 +36,100 @@ META_APP_SECRET = os.getenv('META_APP_SECRET')
 # OAuth 2.0 kapsamları
 SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
 
+# Kullanıcı yönetimi - Test kullanıcıları
+USERS = {
+    'admin': {
+        'password': 'admin',
+        'name': 'Admin User'
+    }
+}
+
+def check_authentication():
+    """Kullanıcının giriş yapıp yapmadığını kontrol et"""
+    if 'authenticated' not in st.session_state:
+        st.session_state['authenticated'] = False
+        st.session_state['username'] = None
+    return st.session_state.get('authenticated', False)
+
+def authenticate_user(username, password):
+    """Kullanıcı adı ve şifreyi doğrula"""
+    if username in USERS and USERS[username]['password'] == password:
+        st.session_state['authenticated'] = True
+        st.session_state['username'] = username
+        return True
+    return False
+
+def logout():
+    """Kullanıcıyı çıkış yaptır"""
+    st.session_state['authenticated'] = False
+    st.session_state['username'] = None
+    # Tüm session state'i temizle (opsiyonel)
+    for key in list(st.session_state.keys()):
+        if key not in ['authenticated', 'username']:
+            del st.session_state[key]
+
+def render_login_page():
+    """Login sayfasını render et"""
+    # Login sayfası için özel CSS (tasarım başka agent tarafından yapılacak)
+    st.markdown("""
+    <style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 2rem;
+    }
+    .login-box {
+        max-width: 400px;
+        width: 100%;
+        padding: 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Ana container
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem 0;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊 Marketing SaaS</h1>
+            <p style="font-size: 1.2rem; color: #6b7280; margin-top: 0;">Spend Smarter</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Login formu
+        with st.form("login_form"):
+            st.subheader("Giriş Yap")
+            
+            username = st.text_input("Kullanıcı Adı", key="login_username", placeholder="Kullanıcı adınızı girin")
+            password = st.text_input("Şifre", type="password", key="login_password", placeholder="Şifrenizi girin")
+            
+            login_button = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
+            
+            if login_button:
+                if username and password:
+                    if authenticate_user(username, password):
+                        st.success("✅ Giriş başarılı! Yönlendiriliyorsunuz...")
+                        st.rerun()
+                    else:
+                        st.error("❌ Kullanıcı adı veya şifre hatalı!")
+                else:
+                    st.warning("⚠️ Lütfen kullanıcı adı ve şifrenizi girin.")
+        
+        # Test bilgileri (geliştirme için)
+        with st.expander("ℹ️ Test Kullanıcı Bilgileri"):
+            st.code("""
+Kullanıcı Adı: admin
+Şifre: admin
+            """)
+
 # Sayfa yapılandırması
 st.set_page_config(
     page_title="Marketing SaaS Dashboard",
@@ -52,9 +146,78 @@ st.markdown("""
         padding: 1rem 2rem;
     }
     
-    /* Sidebar Stil - Gradient Mavi */
+    /* Sidebar Stil - Gradient Mavi ve Okunabilir Metinler */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+    
+    /* Sidebar içindeki tüm metinleri beyaz yap */
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+    
+    /* Sidebar başlıkları */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h4,
+    [data-testid="stSidebar"] h5,
+    [data-testid="stSidebar"] h6 {
+        color: white !important;
+    }
+    
+    /* Sidebar paragrafları ve span'ler */
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] label {
+        color: white !important;
+    }
+    
+    /* Sidebar divider (hr) çizgisi */
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        margin: 1rem 0 !important;
+    }
+    
+    /* Sidebar butonları - beyaz metin */
+    [data-testid="stSidebar"] .stButton > button {
+        color: white !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Sidebar input alanları */
+    [data-testid="stSidebar"] .stTextInput > div > div > input {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    [data-testid="stSidebar"] .stTextInput > div > div > input::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    
+    /* Sidebar selectbox */
+    [data-testid="stSidebar"] .stSelectbox > div > div {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+    
+    /* Sidebar checkbox ve radio */
+    [data-testid="stSidebar"] .stCheckbox > label,
+    [data-testid="stSidebar"] .stRadio > label {
+        color: white !important;
+    }
+    
+    /* Sidebar markdown içeriği */
+    [data-testid="stSidebar"] .stMarkdown {
+        color: white !important;
     }
     
     [data-testid="stSidebar"] .css-1d391kg {
@@ -1148,6 +1311,12 @@ def render_settings():
 # ==================== ANA UYGULAMA ====================
 
 def main():
+    # Authentication kontrolü
+    if not check_authentication():
+        render_login_page()
+        return
+    
+    # Giriş yapılmışsa ana uygulamayı göster
     # Sidebar menü - Modern ve mobil uyumlu
     with st.sidebar:
         st.markdown("""
@@ -1220,6 +1389,20 @@ def main():
         }}
         </style>
         """, unsafe_allow_html=True)
+        
+        # Logout butonu
+        st.markdown("---")
+        st.markdown(f"""
+        <div style="padding: 1rem 0; text-align: center;">
+            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
+                👤 {st.session_state.get('username', 'User')}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🚪 Çıkış Yap", use_container_width=True, key="logout_btn"):
+            logout()
+            st.rerun()
     
     # Sayfa yönlendirme
     if selected == "Genel Bakış":
