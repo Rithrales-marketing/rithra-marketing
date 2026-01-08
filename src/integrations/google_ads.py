@@ -305,15 +305,13 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
     try:
         ga_service = client.get_service("GoogleAdsService")
         
-        # Dönüşüm detaylarını çek - search_term_view kullanarak
-        query = f"""
+        # İlk sorgu: search_term_view'den dönüşüm detaylarını çek
+        query1 = f"""
             SELECT
                 search_term_view.search_term,
-                ad_group_criterion.keyword.text,
-                ad_group_criterion.keyword.match_type,
-                ad_group_ad.ad.final_urls,
-                ad_group_ad.ad.id,
+                ad_group.id,
                 ad_group.name,
+                campaign.id,
                 campaign.name,
                 segments.conversion_action_name,
                 metrics.conversions,
@@ -327,37 +325,86 @@ def get_conversion_details(client, customer_id, start_date=None, end_date=None):
             LIMIT 10000
         """
         
-        # İstek gönder
-        response = ga_service.search(customer_id=customer_id, query=query)
+        # İkinci sorgu: keyword_view'den keyword bilgilerini çek
+        query2 = f"""
+            SELECT
+                keyword_view.keyword.text,
+                keyword_view.keyword.match_type,
+                ad_group.id,
+                campaign.id,
+                ad_group_ad.ad.final_urls,
+                ad_group_ad.ad.id
+            FROM keyword_view
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+            AND metrics.conversions > 0
+            LIMIT 10000
+        """
         
+        # İlk sorguyu çalıştır
+        response1 = ga_service.search(customer_id=customer_id, query=query1)
+        
+        # İkinci sorguyu çalıştır ve keyword bilgilerini bir dictionary'de sakla
+        response2 = ga_service.search(customer_id=customer_id, query=query2)
+        
+        # Keyword bilgilerini bir dictionary'de sakla (ad_group_id + campaign_id -> keyword bilgisi)
+        keyword_map = {}
+        ad_url_map = {}
+        ad_id_map = {}
+        
+        for row in response2:
+            try:
+                keyword_text = row.keyword_view.keyword.text if hasattr(row, 'keyword_view') and row.keyword_view else 'N/A'
+                match_type = row.keyword_view.keyword.match_type.name if hasattr(row, 'keyword_view') and row.keyword_view and hasattr(row.keyword_view.keyword, 'match_type') else 'N/A'
+                ad_group_id = row.ad_group.id if hasattr(row, 'ad_group') and row.ad_group else None
+                campaign_id = row.campaign.id if hasattr(row, 'campaign') and row.campaign else None
+                
+                # Final URLs
+                if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') and hasattr(row.ad_group_ad.ad, 'final_urls'):
+                    final_urls = list(row.ad_group_ad.ad.final_urls)
+                    ad_url = final_urls[0] if final_urls else 'N/A'
+                    ad_id = row.ad_group_ad.ad.id if hasattr(row.ad_group_ad.ad, 'id') else 'N/A'
+                else:
+                    ad_url = 'N/A'
+                    ad_id = 'N/A'
+                
+                if ad_group_id and campaign_id:
+                    key = f"{campaign_id}_{ad_group_id}"
+                    keyword_map[key] = {'keyword': keyword_text, 'match_type': match_type}
+                    ad_url_map[key] = ad_url
+                    ad_id_map[key] = ad_id
+            except Exception as e:
+                continue
+        
+        # İlk sorgudan gelen verileri işle ve keyword bilgilerini ekle
         conversion_details = []
-        for row in response:
+        for row in response1:
             try:
                 search_term = row.search_term_view.search_term if hasattr(row, 'search_term_view') and row.search_term_view else 'N/A'
             except:
                 search_term = 'N/A'
             
             try:
-                keyword_text = row.ad_group_criterion.keyword.text if hasattr(row, 'ad_group_criterion') and row.ad_group_criterion else 'N/A'
-                match_type = row.ad_group_criterion.keyword.match_type.name if hasattr(row, 'ad_group_criterion') and row.ad_group_criterion and hasattr(row.ad_group_criterion.keyword, 'match_type') else 'N/A'
+                ad_group_id = row.ad_group.id if hasattr(row, 'ad_group') and row.ad_group else None
+                campaign_id = row.campaign.id if hasattr(row, 'campaign') and row.campaign else None
             except:
-                keyword_text = 'N/A'
-                match_type = 'N/A'
+                ad_group_id = None
+                campaign_id = None
             
-            # Final URLs
-            try:
-                if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') and hasattr(row.ad_group_ad.ad, 'final_urls'):
-                    final_urls = list(row.ad_group_ad.ad.final_urls)
-                    ad_url = final_urls[0] if final_urls else 'N/A'
-                else:
-                    ad_url = 'N/A'
-            except:
-                ad_url = 'N/A'
+            # Keyword bilgisini map'ten al
+            keyword_text = 'N/A'
+            match_type = 'N/A'
+            ad_url = 'N/A'
+            ad_id = 'N/A'
             
-            try:
-                ad_id = row.ad_group_ad.ad.id if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') else 'N/A'
-            except:
-                ad_id = 'N/A'
+            if ad_group_id and campaign_id:
+                key = f"{campaign_id}_{ad_group_id}"
+                if key in keyword_map:
+                    keyword_text = keyword_map[key]['keyword']
+                    match_type = keyword_map[key]['match_type']
+                if key in ad_url_map:
+                    ad_url = ad_url_map[key]
+                if key in ad_id_map:
+                    ad_id = ad_id_map[key]
             
             try:
                 ad_group_name = row.ad_group.name if hasattr(row, 'ad_group') and row.ad_group else 'N/A'
