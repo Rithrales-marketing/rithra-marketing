@@ -17,7 +17,8 @@ from src.integrations.google_ads import (
     get_google_ads_credentials,
     save_google_ads_credentials,
     get_campaigns_data,
-    list_customer_accounts
+    list_customer_accounts,
+    get_conversion_details
 )
 
 
@@ -381,6 +382,94 @@ def render_google_ads():
                                         st.success(f"✅ {len(df)} kampanya verisi başarıyla yüklendi!")
                                     else:
                                         st.warning("⚠️ Seçilen tarih aralığında kampanya verisi bulunamadı.")
+                                
+                                # Dönüşüm Detayları Bölümü
+                                st.markdown("---")
+                                st.subheader("🎯 Dönüşüm Detayları")
+                                st.info("Keyword, arama terimi, reklam URL'si ve dönüşüm türü detaylarını görüntüleyin.")
+                                
+                                if st.button("📊 Dönüşüm Detaylarını Getir", type="primary", use_container_width=True, key="get_conversion_details_btn"):
+                                    with st.spinner(f"Dönüşüm detayları çekiliyor (Hesap: {selected_customer_id}), lütfen bekleyin..."):
+                                        conversion_details = get_conversion_details(
+                                            client,
+                                            selected_customer_id,
+                                            start_date,
+                                            end_date
+                                        )
+                                        
+                                        if conversion_details:
+                                            st.session_state['google_ads_conversion_details'] = conversion_details
+                                            st.rerun()
+                                        else:
+                                            st.warning("⚠️ Seçilen tarih aralığında dönüşüm detayı bulunamadı.")
+                                
+                                # Dönüşüm detaylarını göster
+                                if 'google_ads_conversion_details' in st.session_state and st.session_state['google_ads_conversion_details']:
+                                    conversion_df = pd.DataFrame(st.session_state['google_ads_conversion_details'])
+                                    
+                                    if not conversion_df.empty:
+                                        st.markdown("### 📋 Dönüşüm Detayları Tablosu")
+                                        
+                                        # Arama kutusu
+                                        search_term_filter = st.text_input(
+                                            "🔍 Arama Terimi veya Keyword ile Filtrele:",
+                                            key="conversion_search_filter",
+                                            placeholder="Arama terimi veya keyword yazın..."
+                                        )
+                                        
+                                        # Filtreleme
+                                        if search_term_filter:
+                                            filtered_df = conversion_df[
+                                                (conversion_df['Arama Terimi'].str.contains(search_term_filter, case=False, na=False)) |
+                                                (conversion_df['Keyword'].str.contains(search_term_filter, case=False, na=False))
+                                            ]
+                                        else:
+                                            filtered_df = conversion_df
+                                        
+                                        # Tabloyu göster
+                                        st.dataframe(
+                                            filtered_df,
+                                            use_container_width=True,
+                                            hide_index=True,
+                                            column_config={
+                                                'Tarih': st.column_config.TextColumn('Tarih', width='small'),
+                                                'Arama Terimi': st.column_config.TextColumn('Arama Terimi', width='medium'),
+                                                'Keyword': st.column_config.TextColumn('Keyword', width='medium'),
+                                                'Eşleşme Türü': st.column_config.TextColumn('Eşleşme Türü', width='small'),
+                                                'Reklam URL': st.column_config.LinkColumn('Reklam URL', width='large'),
+                                                'Reklam ID': st.column_config.NumberColumn('Reklam ID', format='%d'),
+                                                'Reklam Grubu': st.column_config.TextColumn('Reklam Grubu', width='medium'),
+                                                'Kampanya': st.column_config.TextColumn('Kampanya', width='medium'),
+                                                'Dönüşüm Türü': st.column_config.TextColumn('Dönüşüm Türü', width='medium'),
+                                                'Dönüşüm Sayısı': st.column_config.NumberColumn('Dönüşüm Sayısı', format='%d'),
+                                                'Dönüşüm Değeri (₺)': st.column_config.NumberColumn('Dönüşüm Değeri (₺)', format='₺%.2f'),
+                                                'Maliyet (₺)': st.column_config.NumberColumn('Maliyet (₺)', format='₺%.2f')
+                                            }
+                                        )
+                                        
+                                        # Özet istatistikler
+                                        st.markdown("### 📈 Dönüşüm Özeti")
+                                        col1, col2, col3, col4 = st.columns(4)
+                                        
+                                        with col1:
+                                            total_conversions = filtered_df['Dönüşüm Sayısı'].sum()
+                                            st.metric("Toplam Dönüşüm", f"{total_conversions:,}")
+                                        
+                                        with col2:
+                                            total_conversion_value = filtered_df['Dönüşüm Değeri (₺)'].sum()
+                                            st.metric("Toplam Dönüşüm Değeri", f"₺{total_conversion_value:,.2f}")
+                                        
+                                        with col3:
+                                            total_cost = filtered_df['Maliyet (₺)'].sum()
+                                            st.metric("Toplam Maliyet", f"₺{total_cost:,.2f}")
+                                        
+                                        with col4:
+                                            roas = (total_conversion_value / total_cost * 100) if total_cost > 0 else 0
+                                            st.metric("ROAS", f"%{roas:.2f}")
+                                        
+                                        st.success(f"✅ {len(filtered_df)} dönüşüm detayı gösteriliyor!")
+                                    else:
+                                        st.warning("⚠️ Dönüşüm detayı bulunamadı.")
             else:
                 st.error("❌ Google Ads client oluşturulamadı. Lütfen API bilgilerini kontrol edin.")
                 

@@ -285,6 +285,151 @@ def list_customer_accounts(client, manager_customer_id=None):
         return []
 
 
+def get_conversion_details(client, customer_id, start_date=None, end_date=None):
+    """Dönüşüm detaylarını çek - keyword, arama terimi, reklam URL'si ve dönüşüm türü"""
+    if not client or not customer_id:
+        return []
+    
+    # Customer ID formatını düzelt
+    customer_id = str(customer_id).replace('-', '')
+    if len(customer_id) != 10:
+        st.error(f"Geçersiz Customer ID formatı: {customer_id}. 10 haneli olmalı.")
+        return []
+    
+    # Varsayılan tarih aralığı: Son 30 gün
+    if not end_date:
+        end_date = datetime.now().date()
+    if not start_date:
+        start_date = end_date - timedelta(days=30)
+    
+    try:
+        ga_service = client.get_service("GoogleAdsService")
+        
+        # Dönüşüm detaylarını çek - search_term_view kullanarak
+        query = f"""
+            SELECT
+                search_term_view.search_term,
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group_ad.ad.final_urls,
+                ad_group_ad.ad.id,
+                ad_group.name,
+                campaign.name,
+                segments.conversion_action_name,
+                metrics.conversions,
+                metrics.conversions_value,
+                metrics.cost_micros,
+                segments.date
+            FROM search_term_view
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+            AND metrics.conversions > 0
+            ORDER BY metrics.conversions DESC, segments.date DESC
+            LIMIT 10000
+        """
+        
+        # İstek gönder
+        response = ga_service.search(customer_id=customer_id, query=query)
+        
+        conversion_details = []
+        for row in response:
+            try:
+                search_term = row.search_term_view.search_term if hasattr(row, 'search_term_view') and row.search_term_view else 'N/A'
+            except:
+                search_term = 'N/A'
+            
+            try:
+                keyword_text = row.ad_group_criterion.keyword.text if hasattr(row, 'ad_group_criterion') and row.ad_group_criterion else 'N/A'
+                match_type = row.ad_group_criterion.keyword.match_type.name if hasattr(row, 'ad_group_criterion') and row.ad_group_criterion and hasattr(row.ad_group_criterion.keyword, 'match_type') else 'N/A'
+            except:
+                keyword_text = 'N/A'
+                match_type = 'N/A'
+            
+            # Final URLs
+            try:
+                if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') and hasattr(row.ad_group_ad.ad, 'final_urls'):
+                    final_urls = list(row.ad_group_ad.ad.final_urls)
+                    ad_url = final_urls[0] if final_urls else 'N/A'
+                else:
+                    ad_url = 'N/A'
+            except:
+                ad_url = 'N/A'
+            
+            try:
+                ad_id = row.ad_group_ad.ad.id if hasattr(row, 'ad_group_ad') and row.ad_group_ad and hasattr(row.ad_group_ad, 'ad') else 'N/A'
+            except:
+                ad_id = 'N/A'
+            
+            try:
+                ad_group_name = row.ad_group.name if hasattr(row, 'ad_group') and row.ad_group else 'N/A'
+            except:
+                ad_group_name = 'N/A'
+            
+            try:
+                campaign_name = row.campaign.name if hasattr(row, 'campaign') and row.campaign else 'N/A'
+            except:
+                campaign_name = 'N/A'
+            
+            try:
+                conversion_action_name = row.segments.conversion_action_name if hasattr(row.segments, 'conversion_action_name') else 'N/A'
+            except:
+                conversion_action_name = 'N/A'
+            
+            try:
+                conversions = row.metrics.conversions if hasattr(row.metrics, 'conversions') and row.metrics.conversions else 0
+            except:
+                conversions = 0
+            
+            try:
+                conversions_value = row.metrics.conversions_value if hasattr(row.metrics, 'conversions_value') and row.metrics.conversions_value else 0.0
+            except:
+                conversions_value = 0.0
+            
+            try:
+                cost = row.metrics.cost_micros / 1_000_000 if hasattr(row.metrics, 'cost_micros') and row.metrics.cost_micros else 0.0
+            except:
+                cost = 0.0
+            
+            try:
+                date = str(row.segments.date) if hasattr(row.segments, 'date') else 'N/A'
+            except:
+                date = 'N/A'
+            
+            conversion_details.append({
+                'Tarih': str(date),
+                'Arama Terimi': search_term,
+                'Keyword': keyword_text,
+                'Eşleşme Türü': match_type,
+                'Reklam URL': ad_url,
+                'Reklam ID': ad_id,
+                'Reklam Grubu': ad_group_name,
+                'Kampanya': campaign_name,
+                'Dönüşüm Türü': conversion_action_name,
+                'Dönüşüm Sayısı': conversions,
+                'Dönüşüm Değeri (₺)': conversions_value,
+                'Maliyet (₺)': cost
+            })
+        
+        return conversion_details
+        
+    except GoogleAdsException as ex:
+        error_message = ""
+        for error in ex.failure.errors:
+            error_code_str = ""
+            try:
+                if hasattr(error, 'error_code'):
+                    error_code_str = f"{error.error_code}: "
+            except:
+                pass
+            error_message += f"Error {error_code_str}{error.message}\n"
+        st.error(f"Dönüşüm detayları çekilirken hata:\n{error_message}")
+        return []
+    except Exception as e:
+        st.error(f"Beklenmeyen hata: {e}")
+        import traceback
+        st.error(f"Detay: {traceback.format_exc()}")
+        return []
+
+
 def get_google_ads_total_spend():
     """Google Ads toplam harcamasını getir"""
     if 'google_ads_total_spend' in st.session_state:

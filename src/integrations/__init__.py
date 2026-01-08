@@ -14,7 +14,8 @@ from .google_ads import (
     get_google_ads_credentials,
     save_google_ads_credentials,
     get_campaigns_data,
-    list_customer_accounts
+    list_customer_accounts,
+    get_conversion_details
 )
 
 from .meta_ads import (
@@ -38,6 +39,7 @@ __all__ = [
     'save_google_ads_credentials',
     'get_campaigns_data',
     'list_customer_accounts',
+    'get_conversion_details',
     # Meta Ads
     'get_meta_ads_insights_for_account',
     'get_all_meta_ads_data',
