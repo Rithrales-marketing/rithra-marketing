@@ -21,7 +21,7 @@ def render_dashboard():
         st.metric("Ortalama CTR", "0%", delta="0%")
     
     with col4:
-        st.metric("Toplam Harcama", "$0", delta="$0")
+        st.metric("Toplam Harcama", "₺0", delta="₺0")
     
     st.markdown("---")
     st.subheader("📈 Kanal Performansı")

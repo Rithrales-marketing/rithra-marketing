@@ -123,11 +123,11 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
                     'Durum': row.campaign.status.name,
                     'Gösterim': 0,
                     'Tıklama': 0,
-                    'Maliyet ($)': 0.0,
+                    'Maliyet (₺)': 0.0,
                     'Dönüşüm': 0.0,
                     'CTR': 0.0,
-                    'Ortalama CPC ($)': 0.0,
-                    'Dönüşüm Başına Maliyet ($)': 0.0,
+                    'Ortalama CPC (₺)': 0.0,
+                    'Dönüşüm Başına Maliyet (₺)': 0.0,
                     'Günlük Kayıt Sayısı': 0
                 }
             
@@ -137,7 +137,7 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
             if row.metrics.clicks:
                 campaign_dict[campaign_id]['Tıklama'] += row.metrics.clicks
             if row.metrics.cost_micros:
-                campaign_dict[campaign_id]['Maliyet ($)'] += row.metrics.cost_micros / 1_000_000
+                campaign_dict[campaign_id]['Maliyet (₺)'] += row.metrics.cost_micros / 1_000_000
             if row.metrics.conversions:
                 campaign_dict[campaign_id]['Dönüşüm'] += row.metrics.conversions
             
@@ -145,9 +145,9 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
             if row.metrics.ctr is not None:
                 campaign_dict[campaign_id]['CTR'] = row.metrics.ctr
             if row.metrics.average_cpc is not None:
-                campaign_dict[campaign_id]['Ortalama CPC ($)'] = row.metrics.average_cpc / 1_000_000
+                campaign_dict[campaign_id]['Ortalama CPC (₺)'] = row.metrics.average_cpc / 1_000_000
             if row.metrics.cost_per_conversion is not None and row.metrics.cost_per_conversion > 0:
-                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet ($)'] = row.metrics.cost_per_conversion / 1_000_000
+                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet (₺)'] = row.metrics.cost_per_conversion / 1_000_000
             
             campaign_dict[campaign_id]['Günlük Kayıt Sayısı'] += 1
         
@@ -160,14 +160,14 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
                 )
             # Ortalama CPC'yi hesapla
             if campaign_dict[campaign_id]['Tıklama'] > 0:
-                campaign_dict[campaign_id]['Ortalama CPC ($)'] = (
-                    campaign_dict[campaign_id]['Maliyet ($)'] / 
+                campaign_dict[campaign_id]['Ortalama CPC (₺)'] = (
+                    campaign_dict[campaign_id]['Maliyet (₺)'] / 
                     campaign_dict[campaign_id]['Tıklama']
                 )
             # Dönüşüm başına maliyeti hesapla
             if campaign_dict[campaign_id]['Dönüşüm'] > 0:
-                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet ($)'] = (
-                    campaign_dict[campaign_id]['Maliyet ($)'] / 
+                campaign_dict[campaign_id]['Dönüşüm Başına Maliyet (₺)'] = (
+                    campaign_dict[campaign_id]['Maliyet (₺)'] / 
                     campaign_dict[campaign_id]['Dönüşüm']
                 )
             
@@ -176,7 +176,7 @@ def get_campaigns_data(client, customer_id, start_date=None, end_date=None):
         
         campaigns_data = list(campaign_dict.values())
         # Maliyete göre sırala
-        campaigns_data.sort(key=lambda x: x['Maliyet ($)'], reverse=True)
+        campaigns_data.sort(key=lambda x: x['Maliyet (₺)'], reverse=True)
         return campaigns_data
         
     except GoogleAdsException as ex:
