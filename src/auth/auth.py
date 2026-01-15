@@ -32,7 +32,7 @@ def logout():
 
 def render_login_page():
     """Login sayfasını render et"""
-    # Login sayfası için özel CSS (tasarım başka agent tarafından yapılacak)
+    # Login sayfası için özel CSS
     st.markdown("""
     <style>
     .login-container {
@@ -49,6 +49,23 @@ def render_login_page():
         background: white;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    /* Giriş butonu için yeşil stil */
+    div[data-testid="stForm"] button[type="submit"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3) !important;
+    }
+    div[data-testid="stForm"] button[type="submit"]:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4) !important;
     }
     </style>
     """, unsafe_allow_html=True)
