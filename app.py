@@ -507,31 +507,6 @@ def main():
         
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
         
-        # Collections bölümü
-        st.markdown('<div class="sidebar-section-title">Collections</div>', unsafe_allow_html=True)
-        
-        collections = [
-            ("Commercial", "#ef4444"),  # Kırmızı
-            ("Operations", "#3b82f6"),  # Mavi
-            ("Product", "#10b981"),     # Yeşil
-        ]
-        
-        for collection_name, color in collections:
-            st.markdown(f"""
-            <div class="collection-item">
-                <div class="collection-dot" style="background-color: {color};"></div>
-                <span>{collection_name}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class="collection-item" style="color: rgba(255,255,255,0.6) !important; font-size: 0.85rem;">
-            <span>+ Add collection</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
-        
         # Alt kısım - Settings
         is_settings_active = st.session_state['selected_menu'] == "Ayarlar"
         if st.button("⚙️ Ayarlar", key="menu_Ayarlar", use_container_width=True):
