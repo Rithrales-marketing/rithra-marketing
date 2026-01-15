@@ -32,7 +32,7 @@ def logout():
 
 def render_login_page():
     """Login sayfasını render et"""
-    # Login sayfası için özel CSS
+    # Login sayfası için özel CSS - Yeşil buton için güçlü override
     st.markdown("""
     <style>
     .login-container {
@@ -50,9 +50,17 @@ def render_login_page():
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    /* Giriş butonu için yeşil stil */
-    div[data-testid="stForm"] button[type="submit"] {
+    /* Giriş butonu için yeşil stil - Çok güçlü override */
+    div[data-testid="stForm"] button[type="submit"],
+    div[data-testid="stForm"] button.kind-primary,
+    div[data-testid="stForm"] .stButton > button,
+    div[data-testid="stForm"] .stButton > button[kind="primary"],
+    form button[type="submit"],
+    button[type="submit"],
+    button.kind-primary {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        background-color: #10b981 !important;
+        background-image: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
@@ -62,10 +70,32 @@ def render_login_page():
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3) !important;
     }
-    div[data-testid="stForm"] button[type="submit"]:hover {
+    div[data-testid="stForm"] button[type="submit"]:hover,
+    div[data-testid="stForm"] button.kind-primary:hover,
+    div[data-testid="stForm"] .stButton > button:hover,
+    div[data-testid="stForm"] .stButton > button[kind="primary"]:hover,
+    form button[type="submit"]:hover,
+    button[type="submit"]:hover,
+    button.kind-primary:hover {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        background-color: #059669 !important;
+        background-image: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4) !important;
+    }
+    /* Tüm primary butonları yeşil yap - Login sayfasında */
+    .stButton > button[kind="primary"],
+    .stButton > button[type="submit"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        background-color: #10b981 !important;
+        background-image: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+    }
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[type="submit"]:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        background-color: #059669 !important;
+        background-image: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -91,6 +121,33 @@ def render_login_page():
             password = st.text_input("Şifre", type="password", key="login_password", placeholder="Şifrenizi girin")
             
             login_button = st.form_submit_button("Giriş Yap", type="primary", use_container_width=True)
+            
+            # JavaScript ile butonu yeşil yap (inline style override)
+            try:
+                import streamlit.components.v1 as components
+                components.html("""
+                <script>
+                setTimeout(function() {
+                    var buttons = document.querySelectorAll('div[data-testid="stForm"] button[type="submit"], button[type="submit"], button.kind-primary');
+                    buttons.forEach(function(button) {
+                        button.style.setProperty('background', 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 'important');
+                        button.style.setProperty('background-color', '#10b981', 'important');
+                        button.style.setProperty('color', 'white', 'important');
+                        button.style.setProperty('border', 'none', 'important');
+                        button.onmouseover = function() {
+                            this.style.setProperty('background', 'linear-gradient(135deg, #059669 0%, #047857 100%)', 'important');
+                            this.style.setProperty('background-color', '#059669', 'important');
+                        };
+                        button.onmouseout = function() {
+                            this.style.setProperty('background', 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 'important');
+                            this.style.setProperty('background-color', '#10b981', 'important');
+                        };
+                    });
+                }, 200);
+                </script>
+                """, height=0)
+            except:
+                pass
             
             if login_button:
                 if username and password:
